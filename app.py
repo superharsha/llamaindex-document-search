@@ -34,8 +34,9 @@ if openai_api_key:
     os.environ["OPENAI_API_KEY"] = openai_api_key
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 1. Build (and cache) a local, BM25-only query engine with HyDE + GPT-3.5-Turbo
+# 1. Build (and cache) a local, BM25-only query engine with HyDE + GPT-4o
 # ────────────────────────────────────────────────────────────────────────────────
+# Updated with all dependencies: torch, transformers, python-pptx, Pillow, openpyxl, docx2txt
 
 @st.cache_resource
 def build_local_query_engine(sim_top_k: int = 5):
