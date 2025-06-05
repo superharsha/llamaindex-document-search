@@ -68,7 +68,7 @@ def build_local_query_engine(sim_top_k: int = 5):
     )
 
     # 4) Attach Gemini as the final answer generator
-    llm = GeminiMultiModal(model_name="gemini-1.5-pro", temperature=0)
+    llm = GeminiMultiModal(model_name="gemini-2.0-flash", temperature=0)
     Settings.llm = llm
 
     # 5) Build a RetrieverQueryEngine (BM25 → simple synthesizer)
