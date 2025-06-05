@@ -2,10 +2,8 @@ streamlit>=1.28.0
 llama-index>=0.10.0
 llama-index-core>=0.10.0
 llama-index-retrievers-bm25>=0.1.0
-llama-index-multi-modal-llms-openai>=0.1.0
 llama-index-multi-modal-llms-gemini>=0.1.0
 python-dotenv>=1.0.0
-openai>=1.0.0
 google-generativeai>=0.3.0
 asyncio
 rank-bm25>=0.2.2
@@ -15,5 +13,4 @@ pymupdf>=1.23.0
 docx2txt>=0.8
 openpyxl>=3.0.0
 python-pptx>=0.6.0
-Pillow>=8.0.0
-pydantic>=1.10.0 
+Pillow>=8.0.0 
