@@ -12,8 +12,11 @@ from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.retrievers.bm25 import BM25Retriever
 from llama_index.multi_modal_llms.openai import OpenAIMultiModal
+from llama_index.multi_modal_llms.gemini import GeminiMultiModal
 from llama_index.core.query_engine import RetrieverQueryEngine, TransformQueryEngine
 from llama_index.core.indices.query.query_transform import HyDEQueryTransform
+from llama_index.core.program import MultiModalLLMCompletionProgram
+from llama_index.core.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 
 # Load environment variables for local development
@@ -28,10 +31,33 @@ def get_secret(key):
         # Fall back to environment variables (for local development)
         return os.getenv(key)
 
-# Set OpenAI API key
+# Set API keys
 openai_api_key = get_secret("OPENAI_API_KEY")
 if openai_api_key:
     os.environ["OPENAI_API_KEY"] = openai_api_key
+
+gemini_api_key = get_secret("GEMINI_API_KEY")
+if gemini_api_key:
+    os.environ["GEMINI_API_KEY"] = gemini_api_key
+
+prompt_template_str = """\
+    can you summarize what is in the image\
+    and return the answer with json format \
+"""
+
+def pydantic_gemini(
+    model_name, output_class, image_documents, prompt_template_str
+):
+    gemini_llm = GeminiMultiModal(model_name=model_name)
+    llm_program = MultiModalLLMCompletionProgram.from_defaults(
+        output_parser=PydanticOutputParser(output_class),
+        image_documents=image_documents,
+        prompt_template_str=prompt_template_str,
+        multi_modal_llm=gemini_llm,
+        verbose=True,
+    )
+    response = llm_program()
+    return response
 
 # ────────────────────────────────────────────────────────────────────────────────
 # 1. Build (and cache) a local, BM25-only query engine with HyDE + GPT-4o
