@@ -76,7 +76,22 @@ def build_local_query_engine(sim_top_k: int = 5):
         bm25_retriever,
         response_synthesizer=get_response_synthesizer(
             text_qa_template=PromptTemplate(
-                "Context:\n----------------\n{context_str}\n----------------\nQ: {query_str}\nA:"
+                """You are an expert document analyst. Use the provided context to answer the user's question accurately and comprehensively.
+
+CONTEXT INFORMATION:
+{context_str}
+
+INSTRUCTIONS:
+- Answer based ONLY on the information provided in the context above
+- If the context doesn't contain enough information to fully answer the question, clearly state what information is missing
+- Provide specific details, quotes, and examples from the context when relevant
+- Structure your response clearly with proper formatting
+- If multiple documents are referenced, distinguish between them in your answer
+- If you find contradictory information, acknowledge and explain the discrepancies
+
+QUESTION: {query_str}
+
+ANSWER:"""
             ),
             response_mode="compact",
             use_async=True,
