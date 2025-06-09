@@ -1,6 +1,7 @@
 import streamlit as st
 import asyncio
 import os
+import time
 
 from llama_index.core import (
     SimpleDirectoryReader,
@@ -128,11 +129,22 @@ query = st.text_input("Enter your query here:", placeholder="e.g. What are the m
 if st.button("🔍 Run Query") and query.strip():
     try:
         with st.spinner("🔄 Building index (if first run) and querying…"):
+            # Start timing
+            start_time = time.time()
+            
             engine = build_local_query_engine(sim_top_k=20)
             resp = run_query(engine, query)
+            
+            # End timing
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            
     except Exception as e:
         st.error(f"Error: {e}")
     else:
+        # Display timing information
+        st.success(f"⏱️ **Query completed in {elapsed_time:.2f} seconds**")
+        
         st.subheader("🗒️ Answer")
         st.write(resp.response)
 
