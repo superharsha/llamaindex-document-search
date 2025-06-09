@@ -2,6 +2,7 @@ import streamlit as st
 import asyncio
 import os
 import time
+import glob
 
 from llama_index.core import (
     SimpleDirectoryReader,
@@ -50,10 +51,34 @@ def build_local_query_engine(sim_top_k: int = 5):
     # 1) HyDE transformer (to rewrite queries + include original)
     hyde = HyDEQueryTransform(include_original=True)
 
-    # 2) Read & chunk documents
-    documents = SimpleDirectoryReader("./my_local_docs/").load_data()
+    # 2) Read & chunk documents with error handling
+    documents = []
+    doc_dir = "./my_local_docs/"
+    failed_files = []
+    successful_files = []
+    
+    # Try loading files individually to handle corrupted files gracefully
+    for file_path in glob.glob(doc_dir + "*"):
+        if os.path.isfile(file_path):  # Skip directories
+            try:
+                file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
+                documents.extend(file_docs)
+                successful_files.append(os.path.basename(file_path))
+            except Exception as file_error:
+                failed_files.append(f"{os.path.basename(file_path)}: {str(file_error)}")
+                continue
+    
+    # Show loading results
+    if successful_files:
+        st.success(f"✅ Successfully loaded {len(successful_files)} files")
+    if failed_files:
+        st.warning(f"❌ Failed to load {len(failed_files)} files (likely corrupted)")
+        with st.expander("View failed files"):
+            for failed_file in failed_files:
+                st.text(failed_file)
+    
     if not documents:
-        raise RuntimeError("No files found in ./my_local_docs/. Please add some .txt/.pdf/.docx files.")
+        raise RuntimeError("No files could be loaded from ./my_local_docs/. Please check your files.")
 
     parser = HierarchicalNodeParser.from_defaults(chunk_sizes=(4096, 2048, 1024, 512))
     nodes = parser.get_nodes_from_documents(documents)
