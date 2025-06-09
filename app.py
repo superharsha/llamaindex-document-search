@@ -94,9 +94,11 @@ def build_local_query_engine(sim_top_k: int = 5):
     )
 
     # 4) Attach Gemini as the final answer generator
+
     llm = GoogleGenAI(
         model="gemini-2.0-flash",
-        temperature=0
+        temperature=0,
+        api_key=gemini_api_key
     )
     Settings.llm = llm
 
