@@ -15,4 +15,5 @@ openpyxl>=3.0.0
 torch>=1.9.0
 transformers<4.50
 python-pptx>=0.6.0
-Pillow>=8.0.0 
+Pillow>=8.0.0
+reportlab>=3.6.0 

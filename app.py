@@ -3,6 +3,8 @@ import asyncio
 import os
 import time
 import glob
+import tempfile
+from io import BytesIO
 
 from llama_index.core import (
     SimpleDirectoryReader,
@@ -17,6 +19,13 @@ from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.query_engine import RetrieverQueryEngine, TransformQueryEngine
 from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 from dotenv import load_dotenv
+
+# PDF conversion imports
+from docx import Document
+from pptx import Presentation
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 
 # Load environment variables for local development
 load_dotenv()
@@ -68,18 +77,119 @@ def build_local_query_engine(sim_top_k: int = 5):
     file_paths = [f for f in glob.glob(doc_dir + "*") if os.path.isfile(f)]
     total_files = len(file_paths)
     
-    # Try loading files individually to handle corrupted files gracefully
+    def convert_docx_to_pdf(docx_path):
+        """Convert DOCX file to PDF and return the PDF content as bytes"""
+        try:
+            doc = Document(docx_path)
+            
+            # Create PDF in memory
+            pdf_buffer = BytesIO()
+            pdf_doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Extract text from DOCX and add to PDF
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    p = Paragraph(paragraph.text, styles['Normal'])
+                    story.append(p)
+                    story.append(Spacer(1, 12))
+            
+            pdf_doc.build(story)
+            pdf_buffer.seek(0)
+            return pdf_buffer.getvalue()
+        except Exception as e:
+            st.warning(f"Failed to convert DOCX to PDF: {e}")
+            return None
+
+    def convert_pptx_to_pdf(pptx_path):
+        """Convert PPTX file to PDF and return the PDF content as bytes"""
+        try:
+            prs = Presentation(pptx_path)
+            
+            # Create PDF in memory
+            pdf_buffer = BytesIO()
+            pdf_doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Extract text from PPTX slides and add to PDF
+            for i, slide in enumerate(prs.slides):
+                story.append(Paragraph(f"Slide {i+1}", styles['Heading1']))
+                story.append(Spacer(1, 12))
+                
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text.strip():
+                        p = Paragraph(shape.text, styles['Normal'])
+                        story.append(p)
+                        story.append(Spacer(1, 6))
+                
+                story.append(Spacer(1, 24))
+            
+            pdf_doc.build(story)
+            pdf_buffer.seek(0)
+            return pdf_buffer.getvalue()
+        except Exception as e:
+            st.warning(f"Failed to convert PPTX to PDF: {e}")
+            return None
+
+    # Try loading files individually with conversion for DOCX/PPTX
     for i, file_path in enumerate(file_paths):
         try:
             # Update progress
             progress_bar.progress(10 + (i * 30 // total_files))
-            status_text.text(f"Loading {os.path.basename(file_path)}... ({i+1}/{total_files})")
+            file_name = os.path.basename(file_path)
+            file_ext = os.path.splitext(file_name)[1].lower()
+            status_text.text(f"Processing {file_name}... ({i+1}/{total_files})")
             
-            file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
-            documents.extend(file_docs)
-            successful_files.append(os.path.basename(file_path))
+            if file_ext in ['.docx']:
+                # Convert DOCX to PDF
+                status_text.text(f"Converting DOCX to PDF: {file_name}...")
+                pdf_content = convert_docx_to_pdf(file_path)
+                if pdf_content:
+                    # Create temporary PDF file
+                    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                        temp_pdf.write(pdf_content)
+                        temp_pdf_path = temp_pdf.name
+                    
+                    # Load the converted PDF
+                    file_docs = SimpleDirectoryReader(input_files=[temp_pdf_path]).load_data()
+                    # Clean up temp file
+                    os.unlink(temp_pdf_path)
+                    
+                    documents.extend(file_docs)
+                    successful_files.append(f"{file_name} (converted to PDF)")
+                else:
+                    failed_files.append(f"{file_name}: DOCX conversion failed")
+                    
+            elif file_ext in ['.pptx']:
+                # Convert PPTX to PDF
+                status_text.text(f"Converting PPTX to PDF: {file_name}...")
+                pdf_content = convert_pptx_to_pdf(file_path)
+                if pdf_content:
+                    # Create temporary PDF file
+                    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                        temp_pdf.write(pdf_content)
+                        temp_pdf_path = temp_pdf.name
+                    
+                    # Load the converted PDF
+                    file_docs = SimpleDirectoryReader(input_files=[temp_pdf_path]).load_data()
+                    # Clean up temp file
+                    os.unlink(temp_pdf_path)
+                    
+                    documents.extend(file_docs)
+                    successful_files.append(f"{file_name} (converted to PDF)")
+                else:
+                    failed_files.append(f"{file_name}: PPTX conversion failed")
+                    
+            else:
+                # Process other files normally (PDF, XLSX, images, etc.)
+                file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
+                documents.extend(file_docs)
+                successful_files.append(file_name)
+                
         except Exception as file_error:
-            failed_files.append(f"{os.path.basename(file_path)}: {str(file_error)}")
+            failed_files.append(f"{file_name}: {str(file_error)}")
             continue
     
     progress_bar.progress(40)
