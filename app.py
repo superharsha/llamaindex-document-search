@@ -100,8 +100,7 @@ def build_local_query_engine(sim_top_k: int = 5):
     # Simplified hierarchical parsing for better performance
     status_text.text("Creating document chunks...")
     parser = HierarchicalNodeParser.from_defaults(
-        chunk_sizes=[2048, 1024],  # Reduced from (4096, 2048, 1024, 512) for performance
-        chunk_overlap=128  # Reduced overlap
+        chunk_sizes=[4096, 2048, 1024, 512]  # Reverted to original chunk sizes
     )
     nodes = parser.get_nodes_from_documents(documents)
     leaf_nodes = get_leaf_nodes(nodes)
