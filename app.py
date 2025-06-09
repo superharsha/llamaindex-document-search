@@ -13,7 +13,7 @@ from llama_index.core import (
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.retrievers.bm25 import BM25Retriever
-from llama_index.multi_modal_llms.gemini import GeminiMultiModal
+from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.query_engine import RetrieverQueryEngine, TransformQueryEngine
 from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 from dotenv import load_dotenv
@@ -33,7 +33,7 @@ def get_secret(key):
 # Set Gemini API key
 gemini_api_key = get_secret("GEMINI_API_KEY")
 if gemini_api_key:
-    os.environ["GEMINI_API_KEY"] = gemini_api_key
+    os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
 # ────────────────────────────────────────────────────────────────────────────────
 # 1. Build (and cache) a local, BM25-only query engine with HyDE + Gemini
@@ -94,7 +94,10 @@ def build_local_query_engine(sim_top_k: int = 5):
     )
 
     # 4) Attach Gemini as the final answer generator
-    llm = GeminiMultiModal(model_name="gemini-2.0-flash", temperature=0)
+    llm = GoogleGenAI(
+        model="gemini-2.0-flash",
+        temperature=0
+    )
     Settings.llm = llm
 
     # 5) Build a RetrieverQueryEngine (BM25 → simple synthesizer)
